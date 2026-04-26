@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import helmet from "helmet";
+import { connectDB } from "./config/db.js";
 
 dotenv.config();
 
@@ -31,7 +32,6 @@ const corsOptions = {
 
 
 app.use(cors(corsOptions));
-app.options("*",cors(corsOptions));
 
 app.use(helmet());
 app.use(express.json());
@@ -48,7 +48,9 @@ app.use((err, _req, res, _next) => {
 });
 
 
-const port = process.env.PORT || 5020;
-app.listen(port, () => {
-	console.log(`Auth server listening on port ${port}`);
+const PORT = process.env.PORT || 5020;
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  });
 });
