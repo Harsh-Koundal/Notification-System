@@ -5,6 +5,7 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import { connectDB } from "./config/db.js";
+import authRoutes from "./routes/authRoute.js";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use(cookieParser());
 app.use(morgan("combined"));
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.use("/api/auth",authRoutes);
 
 
 
