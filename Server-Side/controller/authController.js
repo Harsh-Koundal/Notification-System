@@ -3,6 +3,7 @@ import validator from "validator";
 import User from "../model/User.js";
 import jwt from "jsonwebtoken";
 import { sendMail } from "../utils/mailer.js";
+import producer from "../kafka/kafkaProducer.js";
 
 export const signup = async(req,res,next)=>{
     try{
@@ -33,14 +34,23 @@ export const signup = async(req,res,next)=>{
             passwordHash,
         });
 
-        await sendMail({
-            to:newUser.email,
-            subject:"Welcome",
-            text:"thankyou for sign up",
-            html:`
-            thankyou for signup and be our family
-            `,
+        await producer.send({
+            topic:"user-events",
+            messages:[
+                {
+                    value:JSON.stringify({
+                        type:"user.signup",
+                        data:{
+                            userId:newUser._id,
+                            email:newUser.email,
+                            name:newUser.name,
+                        },
+                    }),
+                },
+            ],
         });
+
+
         
         return res.status(201).json({
             message:"User created Successfully",

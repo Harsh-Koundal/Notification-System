@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoute.js";
+import { connectProducer } from "./kafka/kafkaProducer.js";
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("combined"));
+
+await connectProducer();
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/api/auth",authRoutes);

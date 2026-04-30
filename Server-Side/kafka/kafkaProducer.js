@@ -1,5 +1,15 @@
-import express from "express";
 import { Kafka } from "kafkajs";
 
-const app = express();
-app.use(express.json());
+const kafka = new Kafka({
+    clientId:"app",
+    brokers: ["localhost:9092"],
+});
+
+const producer = kafka.producer();
+
+export const connectProducer = async () =>{   
+    await producer.connect();
+
+}
+
+export default producer;
