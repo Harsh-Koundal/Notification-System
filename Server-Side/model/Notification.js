@@ -1,4 +1,4 @@
-import mongoose, { STATES } from "mongoose";
+import mongoose from "mongoose";
 
 const NotificationSchema = new mongoose.Schema(
     {
@@ -13,6 +13,11 @@ const NotificationSchema = new mongoose.Schema(
             type: String,
             enum: ["EMAIL", "PUSH", "IN_APP"],
             required: true,
+        },
+
+        eventType:{
+            type:String,
+            required:true,
         },
 
         title: {
