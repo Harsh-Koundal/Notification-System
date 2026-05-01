@@ -8,6 +8,7 @@ dotenv.config({
     path:path.resolve("../.env")
 })
 
+const MAX_RETRY = 3;
 
 const processEmail = async()=>{
     await connectDB();
@@ -32,11 +33,18 @@ const processEmail = async()=>{
                     notif.sentAt = new Date();
                     await notif.save();
 
-                    console.log(`Email sen to ${notif.metadata.email}`);
+                    console.log(`Email sent to ${notif.metadata.email}`);
                 }catch(err){
                     notif.retryCount += 1;
-                    notif.status = "FAILED";
                     notif.error = err.message;
+
+                    if(notif.retryCount >= MAX_RETRY){
+                        notif.status = "FAILED",
+                        console.log(`Permanently Failed for ${notif.metadata.email}`);
+                    }else{
+                        notif.status = "PENDING";
+                        console.warn(`Retry ${notif.retryCount} for ${notif.metadata.email}`);
+                    }
 
                     await notif.save();
                     console.log("Email Failed",err.message);
