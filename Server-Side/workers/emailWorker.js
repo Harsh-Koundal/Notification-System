@@ -3,6 +3,7 @@ import Notification from "../model/Notification.js";
 import dotenv from "dotenv";
 import path from "path";
 import { sendMail } from "../utils/mailer.js";
+import { getBackoffTime } from "../utils/backoff.js";
 
 dotenv.config({
     path:path.resolve("../.env")
@@ -19,6 +20,10 @@ const processEmail = async()=>{
             const notifications = await Notification.find({
                 status:"PENDING",
                 type:"EMAIL",
+                $or:[
+                    {scheduledAt:null},
+                    {scheduledAt:{$lte:new Date()}}
+                ]
             }).limit(5);
 
             for(const notif of notifications){
@@ -42,8 +47,11 @@ const processEmail = async()=>{
                         notif.status = "FAILED",
                         console.log(`Permanently Failed for ${notif.metadata.email}`);
                     }else{
+                        const delay = getBackoffTime(notif.retryCount);
+
                         notif.status = "PENDING";
-                        console.warn(`Retry ${notif.retryCount} for ${notif.metadata.email}`);
+                        notif.scheduledAt = new Date(Date.now() + delay);
+                        console.warn(`Retry ${notif.retryCount} in ${delay / 1000}s for ${notif.metadata.email}`);
                     }
 
                     await notif.save();
