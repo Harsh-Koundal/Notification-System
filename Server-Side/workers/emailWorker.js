@@ -4,12 +4,31 @@ import dotenv from "dotenv";
 import path from "path";
 import { sendMail } from "../utils/mailer.js";
 import { getBackoffTime } from "../utils/backoff.js";
+import producer ,{ connectProducer } from "../kafka/kafkaProducer.js";
 
 dotenv.config({
     path: path.resolve("../.env")
 })
 
 const MAX_RETRY = 3;
+
+
+const recoverStuckJobs = async ()=>{
+    const timeout = 2 * 60 * 1000;
+
+    const stuckJobs =  await Notification.find({
+        status: "PROCESSING",
+        processingStartedAt:{$lte: new Date(Date.now() - timeout)}
+    });
+
+    for(const job of stuckJobs){
+        console.warn(`Recovering stck job ${job._id}`);
+
+        job.status = "PENDING";
+        job.processingStartedAt = null;
+        await job.save();
+    }
+}
 
 const processEmail = async () => {
     await connectDB();
@@ -26,7 +45,8 @@ const processEmail = async () => {
                 ]
             },
                 {
-                    $set: { status: "PROCESSING" }
+                    $set: { status: "PROCESSING" },
+                    processingStartedAt:new Date(),
                 },
                 {
                     new: true
@@ -55,8 +75,23 @@ const processEmail = async () => {
                 notif.error = err.message;
 
                 if (notif.retryCount >= MAX_RETRY) {
-                    notif.status = "FAILED",
-                    console.log(`Permanently Failed for ${notif.metadata.email}`);
+                    notif.status = "FAILED";
+                    
+                    await producer.send({
+                        topic:"email-dlq",
+                        messages: [
+                            {
+                                value:JSON.stringify({
+                                    notificationId:notif._id,
+                                    email:notif.metadata.email,
+                                    reason:notif.error,
+                                    eventType:notif.eventType,
+                                }),
+                            },
+                        ],
+                    });
+                    console.error(`Sent to DLQ: ${notif.metadata.email}`);
+
                 } else {
                     const delay = getBackoffTime(notif.retryCount);
 
@@ -74,4 +109,7 @@ const processEmail = async () => {
         }
     }
 };
+
+setInterval(recoverStuckJobs,60000);
+
 processEmail();

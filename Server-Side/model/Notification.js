@@ -57,6 +57,10 @@ const NotificationSchema = new mongoose.Schema(
             type: Date,
         },
 
+        processingStartedAt:{
+            type:Date,
+        },
+
         sentAt: {
             type: Date,
         },
